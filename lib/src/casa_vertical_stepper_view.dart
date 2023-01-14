@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 
 part "../src/utils/consts.dart";
 
+late Color completeColor;
+late Color inProgressColor;
+late Color upComingColor;
+
 class CasaVerticalStepperView extends StatefulWidget {
   final List<StepperStep> steps;
 
@@ -31,106 +35,88 @@ class CasaVerticalStepperView extends StatefulWidget {
 }
 
 class _CasaVerticalStepperViewState extends State<CasaVerticalStepperView> {
-  late Color completeColor;
-  late Color inProgressColor;
-  late Color upComingColor;
   late List<StepperStep> steps = [];
-
   late List<GlobalKey> _keys;
 
   @override
-  Widget build(BuildContext context) {
+  void initState() {
+    rebuild();
+    _keys = List<GlobalKey>.generate(widget.steps.length, (_) => GlobalKey());
+    super.initState();
+  }
+
+  void rebuild() {
     steps.clear();
     for (var step in widget.steps) {
       if (step.visible) steps.add(step);
     }
-    _keys =
-        List<GlobalKey>.generate(widget.steps.length, (int i) => GlobalKey());
-    return _buildVertical();
   }
 
-  Widget _buildVertical() {
+  void expansionCallback(int index, bool isExpanded){
+    setState(() => widget.steps[index].isExpanded = !isExpanded);
+    if (isExpanded) rebuild();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return widget.isExpandable && steps.isNotEmpty
-        ? _buildPanel()
+        ? ExpansionPanelList(
+            elevation: _kElevation,
+            // dividerColor: Colors.black,
+            expandedHeaderPadding: EdgeInsets.zero,
+            expansionCallback: expansionCallback,
+            children: steps.map<ExpansionPanel>((StepperStep step) {
+              return ExpansionPanel(
+                backgroundColor: widget.backgroundColor ??
+                    Theme.of(context).scaffoldBackgroundColor,
+                canTapOnHeader: true,
+                headerBuilder: (_, __) => BuildVerticalHeader(step: step),
+                body: BuildVerticalBody(
+                  step: step,
+                  separatorColor: widget.seperatorColor,
+                ),
+                isExpanded: step.isExpanded,
+              );
+            }).toList(),
+          )
         : ListView(
             shrinkWrap: true,
             padding: EdgeInsets.zero,
             physics: widget.physics ?? const NeverScrollableScrollPhysics(),
             children: steps
-                .map((step) => Visibility(
-                      visible: step.visible,
-                      child: Column(
-                        key: _keys[steps.indexOf(step)],
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          _buildVerticalHeader(step),
-                          _buildVerticalBody(step),
-                        ],
-                      ),
-                    ))
+                .map(
+                  (step) => Visibility(
+                    visible: step.visible,
+                    child: Column(
+                      key: _keys[steps.indexOf(step)],
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        BuildVerticalHeader(step: step),
+                        BuildVerticalBody(
+                          step: step,
+                          separatorColor: widget.seperatorColor,
+                        ),
+                      ],
+                    ),
+                  ),
+                )
                 .toList(),
           );
   }
+}
 
-  Widget _buildPanel() {
-    return ExpansionPanelList(
-      elevation: 0.0,
-      // dividerColor: Colors.black,
-      expandedHeaderPadding: EdgeInsets.zero,
-      expansionCallback: (int index, bool isExpanded) {
-        // debugPrint("isExpanded: $isExpanded");
-        // debugPrint("isExpanded: $index");
-        setState(() {
-          widget.steps[index].isExpanded = !isExpanded;
-        });
-      },
-      children: steps.map<ExpansionPanel>((StepperStep step) {
-        return ExpansionPanel(
-          backgroundColor: widget.backgroundColor ??
-              Theme.of(context).scaffoldBackgroundColor,
-          canTapOnHeader: true,
-          headerBuilder: (BuildContext context, bool isExpanded) {
-            return _buildVerticalHeader(step);
-          },
-          body: _buildVerticalBody(step),
-          isExpanded: step.isExpanded,
-        );
-      }).toList(),
-    );
-  }
+class BuildVerticalBody extends StatelessWidget {
+  final StepperStep step;
+  final Color? separatorColor;
 
-  Color _stepColor(StepStatus status) {
-    if (status == StepStatus.complete) {
-      return completeColor;
-    } else if (status == StepStatus.inprogress) {
-      return inProgressColor;
-    } else if (status == StepStatus.upcoming) {
-      return upComingColor;
-    } else {
-      return _defaultFailColor;
-    }
-  }
+  const BuildVerticalBody({
+    Key? key,
+    required this.step,
+    this.separatorColor,
+  }) : super(key: key);
 
-  Widget _buildVerticalHeader(StepperStep step) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: _kStepMargin),
-      child: Row(
-        children: <Widget>[
-          _buildIcon(step),
-          Flexible(
-            child: Container(
-              margin: const EdgeInsetsDirectional.only(start: _kStepSpacing),
-              child: step.title,
-            ),
-          ),
-          step.trailing ?? const SizedBox(height: 0, width: 0)
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVerticalBody(StepperStep step) {
-    const kTopMargin = 10.0;
+  @override
+  Widget build(BuildContext context) {
     return Stack(
       children: <Widget>[
         PositionedDirectional(
@@ -145,7 +131,7 @@ class _CasaVerticalStepperViewState extends State<CasaVerticalStepperView> {
               child: SizedBox(
                 width: _kLineWidth,
                 child: Container(
-                  color: widget.seperatorColor ?? _stepColor(step.status),
+                  color: separatorColor ?? _stepColor(step.status),
                 ),
               ),
             ),
@@ -156,38 +142,84 @@ class _CasaVerticalStepperViewState extends State<CasaVerticalStepperView> {
             start: 1.5 * _kStepMargin + _kStepSize,
             end: _kStepMargin,
             bottom: _kStepMargin,
-            top: kTopMargin,
+            top: _kTopMargin,
           ),
           child: step.status == StepStatus.fail ? step.failedView : step.view,
         ),
       ],
     );
   }
+}
 
-  Widget _buildIcon(StepperStep step) {
-    const double iconSize = 34.0;
-    final status = step.status;
-    if (step.leading != null) {
-      return step.leading!;
+class BuildVerticalHeader extends StatelessWidget {
+  final StepperStep step;
+
+  const BuildVerticalHeader({Key? key, required this.step}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: _kStepMargin),
+      child: Row(
+        children: <Widget>[
+          BuildIcon(status: step.status, leading: step.leading),
+          Flexible(
+            child: Container(
+              margin: const EdgeInsetsDirectional.only(start: _kStepSpacing),
+              child: step.title,
+            ),
+          ),
+          step.trailing ?? const SizedBox(height: 0, width: 0)
+        ],
+      ),
+    );
+  }
+}
+
+class BuildIcon extends StatelessWidget {
+  final StepStatus? status;
+  final Widget? leading;
+
+  const BuildIcon({
+    Key? key,
+    this.status,
+    this.leading,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    if (leading != null) {
+      return leading!;
     } else {
       switch (status) {
         case StepStatus.complete:
-          return Icon(Icons.check_box, color: completeColor, size: iconSize);
-
+          return Icon(Icons.check_box, color: completeColor, size: _kIconSize);
         case StepStatus.inprogress:
           return Icon(Icons.check_box_outlined,
-              color: inProgressColor, size: iconSize);
-
+              color: inProgressColor, size: _kIconSize);
         case StepStatus.upcoming:
           return Icon(Icons.check_box_outlined,
-              color: upComingColor, size: iconSize);
-
+              color: upComingColor, size: _kIconSize);
         case StepStatus.fail:
-          return Icon(Icons.warning, color: _defaultFailColor, size: iconSize);
-        case StepStatus.none:
+          return Icon(Icons.warning,
+              color: _defaultFailColor, size: _kIconSize);
+        default:
           return Icon(Icons.check_box_outlined,
-              color: inProgressColor, size: iconSize);
+              color: inProgressColor, size: _kIconSize);
       }
     }
+  }
+}
+
+Color _stepColor(StepStatus status) {
+  switch (status) {
+    case StepStatus.complete:
+      return completeColor;
+    case StepStatus.inprogress:
+      return inProgressColor;
+    case StepStatus.upcoming:
+      return upComingColor;
+    default:
+      return _defaultFailColor;
   }
 }

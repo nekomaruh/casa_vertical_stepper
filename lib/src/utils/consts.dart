@@ -14,3 +14,6 @@ const double _kStepSpacing = 12.0;
 const double _kStepFontSize = 20.0;
 const double _kTriangleHeight = _kStepSize * 0.866025;
 const Duration _kThemeAnimationDuration = Duration(milliseconds: 200);
+const double _kIconSize = 34.0;
+const double _kTopMargin = 10.0;
+const double _kElevation = 0.0;
