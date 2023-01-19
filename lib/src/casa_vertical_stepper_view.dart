@@ -54,7 +54,7 @@ class _CasaVerticalStepperViewState extends State<CasaVerticalStepperView> {
 
   void expansionCallback(int index, bool isExpanded){
     setState(() => widget.steps[index].isExpanded = !isExpanded);
-    if (isExpanded) rebuild();
+    rebuild();
   }
 
   @override
