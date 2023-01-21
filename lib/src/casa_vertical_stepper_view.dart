@@ -9,7 +9,6 @@ late Color upComingColor;
 
 class CasaVerticalStepperView extends StatefulWidget {
   final List<StepperStep> steps;
-
   final Color? backgroundColor;
 
   /// this color will apply single color to all seperator line
@@ -35,38 +34,19 @@ class CasaVerticalStepperView extends StatefulWidget {
 }
 
 class _CasaVerticalStepperViewState extends State<CasaVerticalStepperView> {
-  late List<StepperStep> steps = [];
-  late List<GlobalKey> _keys;
-
-  @override
-  void initState() {
-    rebuild();
-    _keys = List<GlobalKey>.generate(widget.steps.length, (_) => GlobalKey());
-    super.initState();
-  }
-
-  void rebuild() {
-    steps.clear();
-    for (var step in widget.steps) {
-      if (step.visible) steps.add(step);
-    }
-  }
-
-  void expansionCallback(int index, bool isExpanded){
-    setState(() => widget.steps[index].isExpanded = !isExpanded);
-    rebuild();
-  }
+  void expansionCallback(int index, bool isExpanded) =>
+      setState(() => widget.steps[index].isExpanded = !isExpanded);
 
   @override
   Widget build(BuildContext context) {
-    return widget.isExpandable && steps.isNotEmpty
+    return widget.isExpandable //&& widget.steps.isNotEmpty
         ? ExpansionPanelList(
+            key: ValueKey(widget.steps.length),
             elevation: _kElevation,
             // dividerColor: Colors.black,
             expandedHeaderPadding: EdgeInsets.zero,
             expansionCallback: expansionCallback,
-            children: steps.map<ExpansionPanel>((StepperStep step) {
-              return ExpansionPanel(
+            children: widget.steps.map((step) => ExpansionPanel(
                 backgroundColor: widget.backgroundColor ??
                     Theme.of(context).scaffoldBackgroundColor,
                 canTapOnHeader: true,
@@ -76,19 +56,17 @@ class _CasaVerticalStepperViewState extends State<CasaVerticalStepperView> {
                   separatorColor: widget.seperatorColor,
                 ),
                 isExpanded: step.isExpanded,
-              );
-            }).toList(),
+              )).toList(),
           )
         : ListView(
             shrinkWrap: true,
             padding: EdgeInsets.zero,
             physics: widget.physics ?? const NeverScrollableScrollPhysics(),
-            children: steps
+            children: widget.steps
                 .map(
                   (step) => Visibility(
                     visible: step.visible,
                     child: Column(
-                      key: _keys[steps.indexOf(step)],
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         BuildVerticalHeader(step: step),
